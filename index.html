@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Công thức giải Rubik 3x3 – F2L, OLL, PLL</title>
+<script>
+  (function(){var t=null;try{t=localStorage.getItem('rubik-theme');}catch(e){}
+    if(!t)t=(window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark';
+    document.documentElement.setAttribute('data-theme',t);})();
+</script>
+<style>
+  :root,[data-theme="dark"]{
+    --bg:#0f1220; --panel:#171b2e; --card:#1e2340; --line:#2c335a; --inset:#0c0f1c;
+    --text:#e8eaf6; --muted:#9aa3c7; --accent:#ffd500; --code:#ffd500; --accent2:#4fc3f7;
+    --tipbg:#13203a; --tiptext:#cfd8ff; --ok:#43d17a; --warn:#ffa53b; --bad:#ff5c6c; --shadow:none;
+  }
+  [data-theme="light"]{
+    --bg:#f3f4fa; --panel:#ffffff; --card:#ffffff; --line:#d8dbea; --inset:#f0f2f9;
+    --text:#1b1f36; --muted:#5b6386; --accent:#ffc400; --code:#9a6b00; --accent2:#0277bd;
+    --tipbg:#e6f1fb; --tiptext:#1d3b5c; --ok:#1e9e52; --warn:#d97706; --bad:#d9364a; --shadow:0 1px 3px rgba(20,30,70,.08);
+  }
+  :root{--S:54px}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.5;transition:background .25s,color .25s}
+  header{padding:24px 24px 8px;text-align:center;position:relative}
+  header h1{margin:0;font-size:1.9rem}
+  header h1 span{color:var(--accent);text-shadow:0 0 1px rgba(0,0,0,.25)}
+  header p{margin:6px 0 0;color:var(--muted)}
+  #themeBtn{position:absolute;right:24px;top:22px;font-size:1.1rem;padding:6px 12px}
+  .wrap{display:grid;grid-template-columns:390px 1fr;gap:24px;max-width:1380px;margin:0 auto;padding:16px 24px 60px}
+  @media (max-width:950px){.wrap{grid-template-columns:1fr}.sim{position:relative!important;top:0!important}#themeBtn{position:static;margin-top:8px}}
+
+  /* ---------- Simulator ---------- */
+  .sim{position:sticky;top:12px;align-self:start;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow)}
+  .sim .name{color:var(--code);font-weight:700;min-height:1.5em;font-size:1.05rem}
+  .scene{width:100%;height:300px;perspective:1000px;display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none;user-select:none}
+  .scene:active{cursor:grabbing}
+  .cube,.layer{width:calc(var(--S)*3);height:calc(var(--S)*3);position:relative;transform-style:preserve-3d}
+  .layer{position:absolute;left:0;top:0}
+  .cubie{position:absolute;left:var(--S);top:var(--S);width:var(--S);height:var(--S);transform-style:preserve-3d}
+  .cf{position:absolute;inset:0;background:#0a0a0a;padding:3px}
+  .cf i{display:block;width:100%;height:100%;border-radius:6px}
+  .cf.F{transform:translateZ(calc(var(--S)/2))}
+  .cf.B{transform:rotateY(180deg) translateZ(calc(var(--S)/2))}
+  .cf.R{transform:rotateY(90deg) translateZ(calc(var(--S)/2))}
+  .cf.L{transform:rotateY(-90deg) translateZ(calc(var(--S)/2))}
+  .cf.U{transform:rotateX(90deg) translateZ(calc(var(--S)/2))}
+  .cf.D{transform:rotateX(-90deg) translateZ(calc(var(--S)/2))}
+  .hint{font-size:.76rem;color:var(--muted);text-align:center}
+  .algline{background:var(--inset);border:1px solid var(--line);border-radius:10px;padding:10px;margin:10px 0;min-height:48px;display:flex;flex-wrap:wrap;gap:5px;font-family:Consolas,monospace;font-size:1.05rem}
+  .algline span{padding:2px 6px;border-radius:5px}
+  .algline span.done{color:var(--muted);opacity:.7}
+  .algline span.cur{background:var(--accent);color:#111;font-weight:700}
+  .counter{font-size:.8rem;color:var(--muted);text-align:right;margin-top:-6px;margin-bottom:8px}
+  .controls{display:flex;gap:6px;flex-wrap:wrap}
+  .controls button{flex:1;white-space:nowrap;padding:8px 6px}
+  button{background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer;font-size:.92rem;font-family:inherit}
+  button:hover{border-color:var(--accent2)}
+  button.primary{background:var(--accent);color:#111;border-color:var(--accent);font-weight:700}
+  .speed{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:.85rem;color:var(--muted)}
+  .speed input{flex:1}
+  .custom{display:flex;gap:6px;margin-top:10px}
+  .custom input{flex:1;min-width:0;background:var(--inset);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px;font-family:Consolas,monospace}
+  .keys{font-size:.74rem;color:var(--muted);margin-top:8px}
+  kbd{background:var(--inset);border:1px solid var(--line);border-radius:4px;padding:0 5px;font-family:inherit}
+
+  /* ---------- Content ---------- */
+  nav.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px;position:sticky;top:0;background:var(--bg);padding:8px 0;z-index:5}
+  nav.tabs button.active{background:var(--accent2);color:#fff;border-color:var(--accent2);font-weight:700}
+  [data-theme="dark"] nav.tabs button.active{color:#111}
+  section{display:none} section.show{display:block}
+  section h2{margin:0 0 6px}
+  section > p.lead{color:var(--muted);margin-top:0}
+  h3.step{margin:24px 0 8px;display:flex;align-items:center;gap:10px}
+  h3.step b{background:var(--accent);color:#111;border-radius:14px;min-width:30px;height:30px;padding:0 8px;display:inline-flex;align-items:center;justify-content:center;font-size:.9rem}
+  .desc{color:var(--muted);margin:0 0 10px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+  .card{position:relative;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 34px 10px 10px;cursor:pointer;transition:transform .12s,border-color .12s;display:flex;gap:10px;align-items:center;box-shadow:var(--shadow)}
+  .card:hover{transform:translateY(-2px);border-color:var(--accent2)}
+  .card.active{border-color:var(--accent);box-shadow:0 0 0 2px rgba(255,196,0,.35)}
+  .card.mk-learning{border-left:4px solid var(--warn)}
+  .card.mk-learned{border-left:4px solid var(--ok)}
+  .card .info{flex:1;min-width:0}
+  .card .t{font-weight:600}
+  .card code{display:block;font-family:Consolas,monospace;color:var(--code);font-size:.88rem;margin-top:3px;word-break:break-word}
+  .card .n{font-size:.78rem;color:var(--muted);margin-top:3px}
+  .card .alts{font-size:.78rem;color:var(--muted);margin-top:4px}
+  .card .alts span{display:block;font-family:Consolas,monospace;cursor:pointer;border-radius:4px;padding:0 3px}
+  .card .alts span:hover{background:var(--inset);color:var(--text)}
+  .card svg{flex:none}
+  .mark{position:absolute;top:6px;right:6px;width:24px;height:24px;padding:0;border-radius:50%;font-size:.85rem;font-weight:700;line-height:22px;color:var(--muted)}
+  .mk-learning .mark{background:var(--warn);border-color:var(--warn);color:#fff}
+  .mk-learned .mark{background:var(--ok);border-color:var(--ok);color:#fff}
+  .progbar{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin:12px 0;display:flex;flex-wrap:wrap;align-items:center;gap:10px;box-shadow:var(--shadow)}
+  .progbar .txt{font-size:.9rem;flex:1;min-width:200px}
+  .progbar .bar{height:8px;background:var(--inset);border-radius:4px;overflow:hidden;margin-top:6px;display:flex}
+  .progbar .bar i{display:block;height:100%}
+  .progbar .flt button{font-size:.8rem;padding:5px 9px}
+  .progbar .flt button.on{background:var(--accent2);border-color:var(--accent2);color:#fff}
+  table.nota{border-collapse:collapse;width:100%;margin-top:8px}
+  table.nota td,table.nota th{border:1px solid var(--line);padding:8px 10px;text-align:left}
+  table.nota th{background:var(--card)}
+  table.nota code{color:var(--code);font-family:Consolas,monospace;font-weight:700}
+  .movebtns{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+  .movebtns button{font-family:Consolas,monospace;min-width:46px}
+  .tip{background:var(--tipbg);border-left:4px solid var(--accent2);padding:10px 14px;border-radius:8px;color:var(--tiptext);margin:12px 0}
+  .tip code{color:var(--code);font-weight:600}
+
+  /* ---------- Timer ---------- */
+  .scramble{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;font-family:Consolas,monospace;font-size:1.25rem;text-align:center;word-spacing:4px;box-shadow:var(--shadow)}
+  .tbtns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:10px 0}
+  .clock{font-family:Consolas,"SF Mono",monospace;font-size:clamp(3.5rem,11vw,6.5rem);font-weight:700;text-align:center;padding:26px 10px;margin:8px 0;border-radius:16px;background:var(--panel);border:1px solid var(--line);user-select:none;touch-action:none;cursor:pointer;transition:color .1s;box-shadow:var(--shadow)}
+  .clock.hold{color:var(--bad)} .clock.ready{color:var(--ok)} .clock.insp{color:var(--warn)}
+  .clock small{display:block;font-size:.9rem;font-weight:400;color:var(--muted);font-family:"Segoe UI",Roboto,Arial,sans-serif}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:14px 0}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center;box-shadow:var(--shadow)}
+  .stat b{display:block;font-size:1.4rem;font-family:Consolas,monospace}
+  .stat span{font-size:.8rem;color:var(--muted)}
+  .hist{width:100%;border-collapse:collapse;font-size:.92rem}
+  .hist td,.hist th{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left}
+  .hist td.tm{font-family:Consolas,monospace;font-weight:700}
+  .hist td.sc{font-family:Consolas,monospace;font-size:.78rem;color:var(--muted)}
+  .hist button{font-size:.75rem;padding:3px 7px}
+  .hist button.on{background:var(--warn);border-color:var(--warn);color:#fff}
+  .opt{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;color:var(--muted);font-size:.9rem}
+  body.timing .sim, body.timing nav.tabs, body.timing header, body.timing #timer > :not(.clock){opacity:.08;pointer-events:none;transition:opacity .2s}
+</style>
+</head>
+<body>
+<header>
+  <h1>Công thức giải <span>Rubik 3×3</span></h1>
+  <p>Cơ bản · F2L · 2-Look OLL/PLL · Full OLL (57) · Full PLL (21) · Bấm giờ</p>
+  <button id="themeBtn" title="Đổi giao diện sáng / tối">🌙</button>
+</header>
+
+<div class="wrap">
+  <aside class="sim">
+    <div class="name" id="algName">Khối Rubik đã giải</div>
+    <div class="scene" id="scene"><div class="cube" id="cube"></div></div>
+    <div class="hint">Kéo chuột / vuốt để xoay góc nhìn · nhấp đúp để đặt lại</div>
+    <div class="algline" id="algLine"><span class="done">Chọn một công thức →</span></div>
+    <div class="counter" id="counter"></div>
+    <div class="controls">
+      <button id="btnReset" title="Về trạng thái ban đầu">⏮</button>
+      <button id="btnBack" title="Lùi 1 bước">◀ Lùi</button>
+      <button id="btnPlay" class="primary">▶ Chạy</button>
+      <button id="btnStep" title="Tiến 1 bước">Tiếp ▶</button>
+      <button id="btnSolved" title="Khối đã giải">⟲</button>
+    </div>
+    <div class="speed">Tốc độ xoay <input type="range" id="speed" min="0" max="100" value="55"></div>
+    <div class="custom">
+      <input id="customAlg" placeholder="Tự nhập: R U R' U'">
+      <button id="btnCustom">Thử</button>
+    </div>
+    <div class="keys">Phím tắt: <kbd>→</kbd> tiếp · <kbd>←</kbd> lùi · <kbd>Space</kbd> chạy/dừng · <kbd>Home</kbd> về đầu</div>
+  </aside>
+
+  <main>
+    <nav class="tabs" id="tabs">
+      <button data-tab="nota" class="active">Ký hiệu</button>
+      <button data-tab="beg">Cơ bản</button>
+      <button data-tab="f2l">F2L</button>
+      <button data-tab="oll2">2-Look OLL</button>
+      <button data-tab="pll2">2-Look PLL</button>
+      <button data-tab="ollf">Full OLL</button>
+      <button data-tab="pllf">Full PLL</button>
+      <button data-tab="timer">⏱ Bấm giờ</button>
+      <button data-tab="trick">Mẹo</button>
+    </nav>
+
+    <section id="nota" class="show">
+      <h2>Ký hiệu xoay Rubik</h2>
+      <p class="lead">Mọi công thức đều viết bằng các ký hiệu dưới đây. Mặt Trước (F) luôn hướng về phía bạn. Trong mô phỏng: <b>vàng ở trên, trắng ở dưới, xanh lá ở trước, cam ở phải</b>.</p>
+      <table class="nota">
+        <tr><th>Ký hiệu</th><th>Ý nghĩa</th></tr>
+        <tr><td><code>R</code></td><td>Mặt <b>Phải</b> xoay 90° theo chiều kim đồng hồ (nhìn từ bên phải) – đẩy lên</td></tr>
+        <tr><td><code>L</code></td><td>Mặt <b>Trái</b> xoay theo chiều kim đồng hồ (nhìn từ bên trái) – kéo xuống</td></tr>
+        <tr><td><code>U</code></td><td>Mặt <b>Trên</b> xoay theo chiều kim đồng hồ – đẩy sang trái</td></tr>
+        <tr><td><code>D</code></td><td>Mặt <b>Dưới</b> xoay theo chiều kim đồng hồ (nhìn từ dưới) – đẩy sang phải</td></tr>
+        <tr><td><code>F</code> / <code>B</code></td><td>Mặt <b>Trước</b> / <b>Sau</b> xoay theo chiều kim đồng hồ (nhìn thẳng vào mặt đó)</td></tr>
+        <tr><td><code>R'</code></td><td>Dấu phẩy = xoay <b>ngược</b> chiều kim đồng hồ</td></tr>
+        <tr><td><code>R2</code></td><td>Xoay <b>2 lần</b> (180°)</td></tr>
+        <tr><td><code>r</code> <code>l</code> <code>f</code> <code>d</code> (= <code>Rw</code>, <code>Dw</code>…)</td><td>Chữ thường = xoay <b>2 tầng</b> (mặt + tầng giữa liền kề)</td></tr>
+        <tr><td><code>M</code> <code>E</code> <code>S</code></td><td>Tầng giữa: M theo chiều L, E theo chiều D, S theo chiều F</td></tr>
+        <tr><td><code>x</code> <code>y</code> <code>z</code></td><td>Xoay <b>cả khối</b> theo chiều R / U / F</td></tr>
+      </table>
+      <p class="desc" style="margin-top:14px">Bấm thử từng ký hiệu để xem hiệu ứng xoay:</p>
+      <div class="movebtns" id="moveBtns"></div>
+    </section>
+
+    <section id="beg">
+      <h2>Phương pháp cơ bản theo tầng (7 bước)</h2>
+      <p class="lead">Giải từng tầng từ dưới lên, trắng ở dưới, vàng ở trên. Mỗi thẻ dựng sẵn một tình huống, bấm <b>Tiếp ▶</b> để xem từng nước xoay.</p>
+      <div id="begContent"></div>
+    </section>
+
+    <section id="f2l">
+      <h2>F2L – First Two Layers (41 trường hợp)</h2>
+      <p class="lead">Ghép cặp <b>góc + cạnh</b> rồi đưa vào khe trước-phải. Đánh số F2L 1–41 theo bảng phổ biến; mỗi thẻ có thêm công thức thay thế (bấm vào để chạy thử). Hình nhỏ làm mờ tầng trên, chỉ tô màu cặp cần ghép.</p>
+      <div class="tip">Công thức có <code>y'</code> hoặc <code>d</code> nghĩa là xoay cả khối giữa chừng – mô phỏng sẽ xoay thật, nên khi xong mặt trước có thể là màu khác. Các khe khác: xoay <code>y</code> để đưa khe đó ra trước-phải.</div>
+      <div id="f2lContent"></div>
+    </section>
+
+    <section id="oll2">
+      <h2>2-Look OLL – 10 công thức</h2>
+      <p class="lead">Làm vàng toàn bộ mặt trên trong 2 bước: (1) tạo dấu cộng vàng, (2) xoay đúng 4 góc.</p>
+      <div id="oll2Content"></div>
+    </section>
+
+    <section id="pll2">
+      <h2>2-Look PLL – 6 công thức</h2>
+      <p class="lead">Hoán vị tầng cuối trong 2 bước: (1) đặt đúng các góc, (2) đặt đúng các cạnh. Mũi tên cho biết viên nào đi đâu.</p>
+      <div id="pll2Content"></div>
+    </section>
+
+    <section id="ollf">
+      <h2>Full OLL – 57 trường hợp</h2>
+      <p class="lead">Định hướng toàn bộ tầng cuối chỉ trong 1 công thức. Chia theo hình dạng mặt vàng để dễ nhận diện.</p>
+      <div id="ollfContent"></div>
+    </section>
+
+    <section id="pllf">
+      <h2>Full PLL – 21 trường hợp</h2>
+      <p class="lead">Hoán vị toàn bộ tầng cuối trong 1 công thức. Mũi tên chỉ đường đi của từng viên; có thể cần xoay U trước/sau cho khớp.</p>
+      <div id="pllfContent"></div>
+    </section>
+
+    <section id="timer">
+      <h2>⏱ Bấm giờ</h2>
+      <p class="lead">Xáo khối thật theo chuỗi dưới đây (cầm trắng dưới, xanh lá trước… hoặc theo cách bạn quen), rồi giải và bấm giờ.</p>
+      <div class="scramble" id="scramble"></div>
+      <div class="tbtns">
+        <button id="btnNewScr">🔀 Xáo mới</button>
+        <button id="btnShowScr">👁 Xem xáo trên khối</button>
+      </div>
+      <div class="clock" id="clock">0.00<small id="clockHint">Giữ Space (hoặc chạm giữ vào đây) đến khi chữ chuyển xanh, rồi thả để bắt đầu</small></div>
+      <div class="opt">
+        <label><input type="checkbox" id="optInsp"> Quan sát 15 giây (luật WCA: quá 15s +2, quá 17s DNF)</label>
+        <label><input type="checkbox" id="optHide" checked> Ẩn giao diện khi đang giải</label>
+      </div>
+      <div class="stats" id="stats"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h3 style="margin:8px 0">Lịch sử</h3>
+        <button id="btnClear">🗑 Xoá tất cả</button>
+      </div>
+      <table class="hist" id="hist"></table>
+    </section>
+
+    <section id="trick">
+      <h2>Mẹo &amp; ghi nhớ</h2>
+      <div class="tip"><b>Sexy move</b> <code>R U R' U'</code> – nền tảng của rất nhiều công thức. Lặp 6 lần sẽ trở về như cũ.</div>
+      <div class="tip"><b>Sledgehammer</b> <code>R' F R F'</code> – thường đi cặp với sexy move (OLL 33, 37, 45…).</div>
+      <div class="tip">Lộ trình học: Ký hiệu → 7 bước cơ bản → F2L trực giác → 2-Look OLL/PLL (16 công thức, ~30–40s) → Full PLL (21) → Full OLL (57) (sub-20s).</div>
+      <div class="tip">Dùng nút tròn ở góc mỗi thẻ để đánh dấu: <b>○</b> chưa học → <b style="color:var(--warn)">•</b> đang học → <b style="color:var(--ok)">✓</b> đã thuộc. Tiến độ được lưu trên trình duyệt này.</div>
+      <div class="grid" id="trickContent" style="margin-top:14px"></div>
+    </section>
+  </main>
+</div>
+
+<script>
+//ENGINE_START
+const FACE_NORMALS = {U:[0,1,0],D:[0,-1,0],R:[1,0,0],L:[-1,0,0],F:[0,0,1],B:[0,0,-1]};
+function solvedCube(){
+  const s=[];
+  for(let x=-1;x<=1;x++)for(let y=-1;y<=1;y++)for(let z=-1;z<=1;z++){
+    for(const f in FACE_NORMALS){
+      const n=FACE_NORMALS[f];
+      if((n[0]&&n[0]===x)||(n[1]&&n[1]===y)||(n[2]&&n[2]===z)) s.push({p:[x,y,z],n:n.slice(),c:f});
+    }
+  }
+  return s;
+}
+function rot90(v,axis){
+  const [x,y,z]=v;
+  if(axis==='x') return [x,-z,y];
+  if(axis==='y') return [z,y,-x];
+  return [-y,x,z];
+}
+const MOVES={
+  R:['x',p=>p[0]===1,-1], L:['x',p=>p[0]===-1,1], M:['x',p=>p[0]===0,1],
+  U:['y',p=>p[1]===1,-1], D:['y',p=>p[1]===-1,1], E:['y',p=>p[1]===0,1],
+  F:['z',p=>p[2]===1,-1], B:['z',p=>p[2]===-1,1], S:['z',p=>p[2]===0,-1],
+  r:['x',p=>p[0]>=0,-1], l:['x',p=>p[0]<=0,1],
+  u:['y',p=>p[1]>=0,-1], d:['y',p=>p[1]<=0,1],
+  f:['z',p=>p[2]>=0,-1], b:['z',p=>p[2]<=0,1],
+  x:['x',()=>true,-1], y:['y',()=>true,-1], z:['z',()=>true,-1]
+};
+function parseAlg(str){
+  const toks=str.replace(/[()\[\]]/g,' ').replace(/’/g,"'").trim().split(/\s+/).filter(Boolean);
+  const out=[];
+  for(const t of toks){
+    const m=t.match(/^([RLUDFBMESrludfbxyz])(w?)(2?)('?)(2?)$/);
+    if(!m) throw new Error('Ký hiệu không hợp lệ: '+t);
+    let face=m[1]; if(m[2]) face=face.toLowerCase();
+    out.push({face,two:!!(m[3]||m[5]),prime:!!m[4]});
+  }
+  return out;
+}
+function tokStr(t){return t.face+(t.two?'2':'')+(t.prime&&!t.two?"'":'');}
+function invTok(t){return {face:t.face,two:t.two,prime:t.two?false:!t.prime};}
+function invertTokens(toks){return toks.slice().reverse().map(invTok);}
+function turnsOf(t){return MOVES[t.face][2]*(t.prime?-1:1)*(t.two?2:1);}
+function applyMove(state,t){
+  const [axis,filt]=MOVES[t.face];
+  const q=((turnsOf(t)%4)+4)%4;
+  for(const s of state){
+    if(!filt(s.p)) continue;
+    for(let i=0;i<q;i++){s.p=rot90(s.p,axis);s.n=rot90(s.n,axis);}
+  }
+}
+function applyAlg(state,str){for(const t of parseAlg(str)) applyMove(state,t);return state;}
+function faceOf(n){for(const f in FACE_NORMALS){const v=FACE_NORMALS[f];if(v[0]===n[0]&&v[1]===n[1]&&v[2]===n[2])return f;}}
+//ENGINE_END
+
+const COLORS={U:'#FFD500',D:'#FFFFFF',F:'#009B48',B:'#0046AD',R:'#FF5800',L:'#B71234'};
+const GREY='#4a4f66';
+const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
+
+/* Starting state for an algorithm, held in standard orientation (handles y', d, x… inside algs) */
+const ROTS=[];for(const a of ['','x','x2',"x'",'z',"z'"])for(const b of ['','y','y2',"y'"])ROTS.push((a+' '+b).trim());
+function centersHome(st){return st.every(s=>{const z=(s.p[0]!==0)+(s.p[1]!==0)+(s.p[2]!==0);return z!==1||s.c===faceOf(s.n);});}
+const setupCache={};
+function setupTokens(alg){
+  if(setupCache[alg])return setupCache[alg];
+  const toks=parseAlg(alg);
+  const st=solvedCube();for(const t of toks)applyMove(st,t);
+  let rho=[];
+  if(!centersHome(st)){
+    for(const r of ROTS){if(!r)continue;const c=st.map(s=>({p:s.p.slice(),n:s.n.slice(),c:s.c}));applyAlg(c,r);
+      if(centersHome(c)){rho=invertTokens(parseAlg(r));break;}}
+  }
+  return setupCache[alg]=rho.concat(invertTokens(toks));
+}
+function setupState(alg){const st=solvedCube();for(const t of setupTokens(alg))applyMove(st,t);return st;}
+
+/* ================= 3D cube with animated layers ================= */
+const cubeEl=document.getElementById('cube');
+let state=solvedCube();
+let cubieEls=[];
+function render(){
+  cubeEl.innerHTML='';cubieEls=[];
+  const groups={};
+  for(const s of state){const k=s.p.join();(groups[k]=groups[k]||{p:s.p,st:[]}).st.push(s);}
+  for(const k in groups){
+    const g=groups[k];
+    const el=document.createElement('div');el.className='cubie';
+    el.style.transform=`translate3d(calc(var(--S)*${g.p[0]}),calc(var(--S)*${-g.p[1]}),calc(var(--S)*${g.p[2]}))`;
+    let html='';
+    for(const f of ['U','D','F','B','R','L']){
+      const s=g.st.find(o=>faceOf(o.n)===f);
+      html+=s?`<div class="cf ${f}"><i style="background:${COLORS[s.c]}"></i></div>`:`<div class="cf ${f}"></div>`;
+    }
+    el.innerHTML=html;el._p=g.p;cubeEl.appendChild(el);cubieEls.push(el);
+  }
+}
+const CSS_SIGN={x:-1,y:1,z:-1};
+let busy=false;
+function speedMs(){const v=+document.getElementById('speed').value;return Math.round(700-v*6.2);}
+function animateMove(t,fast){
+  return new Promise(res=>{
+    const [axis,filt]=MOVES[t.face];
+    const q=turnsOf(t);
+    const dur=(fast||speedMs())*(Math.abs(q)===2?1.5:1);
+    const layer=document.createElement('div');layer.className='layer';cubeEl.appendChild(layer);
+    for(const el of cubieEls) if(filt(el._p)) layer.appendChild(el);
+    layer.getBoundingClientRect();
+    layer.style.transition=`transform ${dur}ms cubic-bezier(.45,.05,.35,1)`;
+    layer.style.transform=`rotate${axis.toUpperCase()}(${q*90*CSS_SIGN[axis]}deg)`;
+    let done=false;
+    const fin=()=>{if(done)return;done=true;applyMove(state,t);render();res();};
+    layer.addEventListener('transitionend',fin,{once:true});
+    setTimeout(fin,dur+80);
+  });
+}
+let rx=-26,ry=-36;
+function setView(){cubeEl.style.transform=`rotateX(${rx}deg) rotateY(${ry}deg)`;}
+setView();
+(function(){
+  const sc=document.getElementById('scene');let drag=false,lx=0,ly=0;
+  sc.addEventListener('pointerdown',e=>{drag=true;lx=e.clientX;ly=e.clientY;sc.setPointerCapture(e.pointerId);});
+  sc.addEventListener('pointermove',e=>{if(!drag)return;ry+=(e.clientX-lx)*0.5;rx-=(e.clientY-ly)*0.5;rx=Math.max(-89,Math.min(89,rx));lx=e.clientX;ly=e.clientY;setView();});
+  sc.addEventListener('pointerup',()=>drag=false);
+  sc.addEventListener('dblclick',()=>{rx=-26;ry=-36;setView();});
+})();
+
+/* ================= Mini diagrams ================= */
+let svgId=0;
+function topSVG(alg,mode){ // mode: 'oll' (yellow only) | 'pll' (colors + arrows) | 'top'
+  const st=setupState(alg);
+  const c=9,g=26,o=12,parts=[];
+  const rect=(x,y,w,h,col)=>parts.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" fill="${col}" stroke="#111" stroke-width="1"/>`);
+  for(const s of st){
+    if(s.p[1]!==1) continue;
+    const f=faceOf(s.n),[x,,z]=s.p,col=mode==='oll'?(s.c==='U'?COLORS.U:GREY):COLORS[s.c];
+    const gx=o+(x+1)*g, gz=o+(z+1)*g;
+    if(f==='U') rect(gx,gz,g-2,g-2,col);
+    else if(f==='F') rect(gx,o+3*g+1,g-2,c-2,col);
+    else if(f==='B') rect(gx,o-c+1,g-2,c-2,col);
+    else if(f==='L') rect(o-c+1,gz,c-2,g-2,col);
+    else if(f==='R') rect(o+3*g+1,gz,c-2,g-2,col);
+  }
+  let defs='';
+  if(mode==='pll'){
+    const id='ah'+(++svgId);
+    defs=`<defs><marker id="${id}" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="4.2" markerHeight="4.2" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#111"/></marker></defs>`;
+    const groups={};
+    for(const s of st){if(s.p[1]!==1)continue;const k=s.p.join();(groups[k]=groups[k]||{p:s.p,cs:[]}).cs.push(s.c);}
+    const moves=[];
+    for(const k in groups){
+      const gr=groups[k];if(gr.cs.length<2)continue;
+      const home=[0,0,0];gr.cs.forEach(cc=>{const n=FACE_NORMALS[cc];home[0]+=n[0];home[1]+=n[1];home[2]+=n[2];});
+      if(home.join()!==k) moves.push([gr.p,home]);
+    }
+    const ctr=p=>[o+(p[0]+1)*g+(g-2)/2,o+(p[2]+1)*g+(g-2)/2];
+    const seen=new Set();
+    for(const [a,b] of moves){
+      const key=a.join()+'>'+b.join(),rev=b.join()+'>'+a.join();
+      if(seen.has(rev))continue;seen.add(key);
+      const two=moves.some(([c2,d2])=>c2.join()===b.join()&&d2.join()===a.join());
+      let [x1,y1]=ctr(a),[x2,y2]=ctr(b);const dx=x2-x1,dy=y2-y1,L=Math.hypot(dx,dy),sh=6;
+      const ux=dx/L,uy=dy/L;
+      if(two){x1+=ux*sh;y1+=uy*sh;}else{x1+=ux*3;y1+=uy*3;}
+      x2-=ux*sh;y2-=uy*sh;
+      parts.push(`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#111" stroke-width="2.6" stroke-linecap="round" marker-end="url(#${id})"${two?` marker-start="url(#${id})"`:''}/>`);
+    }
+  }
+  const W=o*2+3*g;
+  return `<svg width="76" height="76" viewBox="0 0 ${W} ${W}">${defs}${parts.join('')}</svg>`;
+}
+function isoSVG(alg){
+  const st=setupState(alg);
+  const sets={};for(const s of st){const k=s.p.join();(sets[k]=sets[k]||[]).push(s.c);}
+  const isPair=s=>{const cs=sets[s.p.join()].slice().sort().join('');return cs==='DFR'||cs==='FR';};
+  const u=11,P=(x,y,z)=>[((x-z)*0.866*u).toFixed(1),((-y+(x+z)*0.5)*u).toFixed(1)];
+  const polys=[],h=0.46;
+  for(const s of st){
+    const f=faceOf(s.n);if(!'UFR'.includes(f))continue;
+    const [x,y,z]=s.p;let pts;
+    if(f==='U') pts=[[x-h,1.5,z-h],[x+h,1.5,z-h],[x+h,1.5,z+h],[x-h,1.5,z+h]];
+    if(f==='F') pts=[[x-h,y+h,1.5],[x+h,y+h,1.5],[x+h,y-h,1.5],[x-h,y-h,1.5]];
+    if(f==='R') pts=[[1.5,y+h,z+h],[1.5,y+h,z-h],[1.5,y-h,z-h],[1.5,y-h,z+h]];
+    const col=(s.p[1]===1&&!isPair(s))||(s.p[0]===1&&s.p[2]===1&&!isPair(s))?GREY:COLORS[s.c];
+    polys.push(`<polygon points="${pts.map(p=>P(...p).join(',')).join(' ')}" fill="${col}" stroke="#111" stroke-width="0.8" stroke-linejoin="round"/>`);
+  }
+  return `<svg width="74" height="80" viewBox="-31 -36 62 70"><polygon points="${[P(-1.5,1.5,-1.5),P(1.5,1.5,-1.5),P(1.5,-1.5,-1.5),P(1.5,-1.5,1.5),P(-1.5,-1.5,1.5),P(-1.5,1.5,1.5)].map(p=>p.join(',')).join(' ')}" fill="#111"/>${polys.join('')}</svg>`;
+}
+
+/* ================= Player ================= */
+let cur={name:'',toks:[],setup:[]},idx=0,playing=false;
+const lineEl=document.getElementById('algLine'),nameEl=document.getElementById('algName'),playBtn=document.getElementById('btnPlay'),cntEl=document.getElementById('counter');
+function drawLine(){
+  if(!cur.toks.length){lineEl.innerHTML='<span class="done">Chọn một công thức →</span>';cntEl.textContent='';return;}
+  lineEl.innerHTML=cur.toks.map((t,i)=>`<span class="${i<idx?'done':i===idx?'cur':''}">${tokStr(t)}</span>`).join('');
+  cntEl.textContent=`Bước ${idx} / ${cur.toks.length}`+(idx===cur.toks.length?' ✓ Hoàn thành':'');
+}
+function load(name,alg,fromSolved){
+  playing=false;
+  cur={name,toks:parseAlg(alg),setup:fromSolved?[]:setupTokens(alg)};
+  nameEl.textContent=name;resetPos();
+}
+function resetPos(){
+  if(busy){playing=false;setTimeout(resetPos,60);return;}
+  playing=false;updatePlayBtn();
+  state=solvedCube();for(const t of cur.setup)applyMove(state,t);idx=0;render();drawLine();
+}
+async function step(){
+  if(busy||idx>=cur.toks.length) return false;
+  busy=true;await animateMove(cur.toks[idx]);idx++;busy=false;drawLine();return true;
+}
+async function back(){
+  if(busy||idx<=0) return;
+  playing=false;updatePlayBtn();
+  busy=true;idx--;drawLine();await animateMove(invTok(cur.toks[idx]));busy=false;drawLine();
+}
+async function play(){
+  if(playing){playing=false;updatePlayBtn();return;}
+  if(!cur.toks.length) return;
+  if(idx>=cur.toks.length){resetPos();await new Promise(r=>setTimeout(r,350));}
+  playing=true;updatePlayBtn();
+  while(playing&&idx<cur.toks.length){
+    if(!(await step()))break;
+    await new Promise(r=>setTimeout(r,Math.max(40,speedMs()*0.25)));
+  }
+  playing=false;updatePlayBtn();
+}
+function updatePlayBtn(){playBtn.textContent=playing?'⏸ Dừng':'▶ Chạy';}
+document.getElementById('btnReset').onclick=resetPos;
+document.getElementById('btnStep').onclick=()=>{playing=false;updatePlayBtn();step();};
+document.getElementById('btnBack').onclick=back;
+playBtn.onclick=play;
+document.getElementById('btnSolved').onclick=()=>{playing=false;cur={name:'',toks:[],setup:[]};nameEl.textContent='Khối Rubik đã giải';resetPos();document.querySelectorAll('.card.active').forEach(c=>c.classList.remove('active'));};
+document.getElementById('btnCustom').onclick=()=>{
+  const v=document.getElementById('customAlg').value.trim();if(!v)return;
+  try{load('Công thức tự nhập',v,true);}catch(e){nameEl.textContent='⚠ '+e.message;}
+};
+
+/* ================= Data ================= */
+const GEN={"OLL":{"1":"R U2 R2 F R F' U2 R' F R F'","2":"r U r' U2 r U2 R' U2 R U' r'","3":"r' R2 U R' U r U2 r' U M'","4":"M U' r U2 r' U' R U' R' M'","5":"l' U2 L U L' U l","6":"r U2 R' U' R U' r'","7":"r U R' U R U2 r'","8":"l' U' L U' L' U2 l","9":"R U R' U' R' F R2 U R' U' F'","10":"R U R' U R' F R F' R U2 R'","11":"r U R' U R' F R F' R U2 r'","12":"M' R' U' R U' R' U2 R U' R r'","13":"F U R U' R2 F' R U R U' R'","14":"R' F R U R' F' R F U' F'","15":"l' U' l L' U' L U l' U l","16":"r U r' R U R' U' r U' r'","17":"F R' F' R2 r' U R U' R' U' M'","18":"r U R' U R U2 r2 U' R U' R' U2 r","19":"r' R U R U R' U' M' R' F R F'","20":"r U R' U' M2 U R U' R' U' M'","21":"R U2 R' U' R U R' U' R U' R'","22":"R U2 R2 U' R2 U' R2 U2 R","23":"R2 D' R U2 R' D R U2 R","24":"r U R' U' r' F R F'","25":"F' r U R' U' r' F R","26":"R U2 R' U' R U' R'","27":"R U R' U R U2 R'","28":"r U R' U' r' R U R U' R'","29":"R U R' U' R U' R' F' U' F R U R'","30":"F R' F R2 U' R' U' R U R' F2","31":"R' U' F U R U' R' F' R","32":"L U F' U' L' U L F L'","33":"R U R' U' R' F R F'","34":"R U R2 U' R' F R U R U' F'","35":"R U2 R2 F R F' R U2 R'","36":"L' U' L U' L' U L U L F' L' F","37":"F R' F' R U R U' R'","38":"R U R' U R U' R' U' R' F R F'","39":"L F' L' U' L U F U' L'","40":"R' F R U R' U' F' U R","41":"R U R' U R U2 R' F R U R' U' F'","42":"R' U' R U' R' U2 R F R U R' U' F'","43":"F' U' L' U L F","44":"F U R U' R' F'","45":"F R U R' U' F'","46":"R' U' R' F R F' U R","47":"R' U' R' F R F' R' F R F' U R","48":"F R U R' U' R U R' U' F'","49":"r U' r2 U r2 U r2 U' r","50":"r' U r2 U' r2 U' r2 U r'","51":"F U R U' R' U R U' R' F'","52":"R U R' U R U' B U' B' R'","53":"l' U2 L U L' U' L U L' U l","54":"r U2 R' U' R U R' U' R U' r'","55":"R' F R U R U' R2 F' R2 U' R' U R U R'","56":"r' U' r U' R' U R U' R' U R r' U r","57":"R U R' U' M' U R U' r'"},"PLL":{"Aa":"x R' U R' D2 R U' R' D2 R2 x'","Ab":"x R2 D2 R U R' D2 R U' R x'","E":"x' R U' R' D R U R' D' R U R' D R U' R' D' x","F":"R' U' F' R U R' U' R' F R2 U' R' U' R U R' U R","Ga":"R2 U R' U R' U' R U' R2 U' D R' U R D'","Gb":"R' U' R U D' R2 U R' U R U' R U' R2 D","Gc":"R2 U' R U' R U R' U R2 U D' R U' R' D","Gd":"R U R' U' D R2 U' R U' R' U R' U R2 D'","H":"M2 U M2 U2 M2 U M2","Ja":"R' U L' U2 R U' R' U2 R L","Jb":"R U R' F' R U R' U' R' F R2 U' R'","Na":"R U R' U R U R' F' R U R' U' R' F R2 U' R' U2 R U' R'","Nb":"R' U R U' R' F' U' F R U R' F R' F' R U' R","Ra":"R U' R' U' R U R D R' U' R D' R' U2 R'","Rb":"R2 F R U R U' R' F' R U2 R' U2 R","T":"R U R' U' R' F R2 U' R' U' R U R' F'","Ua":"R U' R U R U R U' R' U' R2","Ub":"R2 U R U R' U' R' U' R' U R'","V":"R' U R' U' B' R' B2 U' B' U B' R B R","Y":"F R U' R' U' R U R' F' R U R' U' R' F R F'","Z":"M' U M2 U M2 U M' U2 M2"},"F2L":[{"num":1,"a":"U R U' R'","alt":["R' F R F'"]},{"num":2,"a":"y' R' U' R","alt":["F' U' F"]},{"num":3,"a":"y' U' R' U R","alt":["F R' F' R","y U' L' U L"]},{"num":4,"a":"R U R'","alt":["y' f R f'","y F U F'","y2 L U L'"]},{"num":5,"a":"U' R U R' U2 R U' R'","alt":["U' R U R' U' R U2 R'","F2 L' U' L U F2"]},{"num":6,"a":"U' R U2 R' U2 R U' R'","alt":["U' R U2 R' U' R U2 R'","U' R U2 R' U R' F R F'","M' U' M U2 r U' r'"]},{"num":7,"a":"y' U R' U' R U2 R' U R","alt":["U' r U' R' U R U r'","d R' U' R U2 R' U R","U F' U' F U2 F' U F"]},{"num":8,"a":"y' U R' U2 R U2 R' U R","alt":["d R' U2 R U R' U2 R","y U L' U2 L U2 L' U L"]},{"num":9,"a":"y' U R' U' R U' R' U' R","alt":["U' R U' R' U F' U' F","F R U R' U' F' R U' R'"]},{"num":10,"a":"U' R U2 R' y' U R' U' R","alt":["U' R U2 R' U F' U' F","U' R U2 R' d R' U' R"]},{"num":11,"a":"y' U R' U R U' R' U' R","alt":["d R' U R U' R' U' R"]},{"num":12,"a":"U' R U R' U R U R'","alt":["U2 R U' R' U' R U R'"]},{"num":13,"a":"y' U R' U2 R Dw' R U R'","alt":["U R U' R' U' R U R' U' R U R'","R' U2 R2 U R2 U R"]},{"num":14,"a":"U' R U' R' U R U R'","alt":[]},{"num":15,"a":"y' R' U R U' y U' R U R'","alt":["R' D' R U' R' D R U R U' R'","U R' F R F' U R U R'"]},{"num":16,"a":"R U2 R' U' R U R'","alt":["R U R' U' R U2 R' U2 R U R'"]},{"num":17,"a":"R U' R' U d R' U' R","alt":["R U' R' U2 F' U' F","U F U R U' R' F' R U R'","R U' R' U2 y' R' U' R"]},{"num":18,"a":"y' R' U2 R U R' U' R","alt":["R' F R F' R U' R' U R U' R'","R U R' U' R U R' U' F R' F' R"]},{"num":19,"a":"U R U2 R' U R U' R'","alt":["U R U2 R2 F R F'","R U' R' U R U' R' U R U R'"]},{"num":20,"a":"U2 R U R' U R U' R'","alt":[]},{"num":21,"a":"y' U' R' U2 R U' R' U R","alt":["U' R U' R2 F R F' R U' R'"]},{"num":22,"a":"y' U2 R' U' R U' R' U R","alt":["F' L' U2 L F"]},{"num":23,"a":"R U R' U2' R U R' U' R U R'","alt":["U F R' F' R U R U R'","U R U' R' U' R U' R' U R U' R'"]},{"num":24,"a":"y' R' U' R U2 R' U' R U R' U' R","alt":["F U R U' R' F' R U' R'","U' R U R2 F R F' R U' R'"]},{"num":25,"a":"y U' L' U L d R U' R'","alt":["U' R' F R F' R U R'","R' F' R U R U' R' F"]},{"num":26,"a":"R U' R' U R U' R'","alt":["F' U' F U2 R U' R'"]},{"num":27,"a":"y' R' U' R U R' U' R","alt":["R' F R F' U R U' R'"]},{"num":28,"a":"U R U' R' F R' F' R","alt":["y' R U R U R U' R' U' R'","U R U' R' U' F' U F"]},{"num":29,"a":"y' R' U R U' R' U R","alt":["R U R' U' F R' F' R","F' U F U' F' U F"]},{"num":30,"a":"R U R' U' R U R'","alt":["U' R U2 R' U2 R U R'","U' F R' F' R2 U R'"]},{"num":31,"a":"R U' R' y' R' U2 R","alt":["U' R' F R F' R U' R'","R U' R' U2 F R' F' R"]},{"num":32,"a":"U' R U' R' U2 R U' R'","alt":["U' R U' R' U R' F R F'"]},{"num":33,"a":"U' R U R' d R' U' R","alt":["U2 R U R' y' U' R' U R"]},{"num":34,"a":"R U R' U' R U R' U' R U R'","alt":["R2 U R2 U R2 U2 R2"]},{"num":35,"a":"U' R U2 R' U R U R'","alt":["U R U R' U2 R U R'","U R' D' R U' R' D R"]},{"num":36,"a":"y' U R' U' R d' R U R'","alt":["U F' U' F U' R U R'","U2 R' F R F' U2 R U R'"]},{"num":37,"a":"R U' R' U' R U R' U2 R U' R'","alt":["R U R' U' R U2 R' U' R U R'","R2 U2 R' U' R U' R' U2 R'"]},{"num":38,"a":"R U' R' U y' R' U' R U' R' U' R","alt":["R U' R' U' R U' R' U y' R' U' R","F' L' U2 L F R U R'","r U' r' U2 r U r' R U R'"]},{"num":39,"a":"R U' R' Dw R' U2 R U2' R' U R","alt":["R2 U2 F R2 F' U2 R' U R'"]},{"num":40,"a":"R U' R' U R U2 R' U R U' R'","alt":["R U2 R U R' U R U2 R2","R U R' U2 R U' R' U R U R'"]},{"num":41,"a":"R U' R' U d R' U' R U' R' U R","alt":["R U' R' r U' r' U2 r U r'","R U' R' F' L' U2 L F"]}]};
+const R4="R' D' R D ";
+const BEG=[
+  {step:'Dấu cộng trắng (White Cross)',desc:'Đưa 4 cạnh trắng xuống mặt dưới tạo dấu cộng, màu bên của mỗi cạnh trùng với tâm. Chủ yếu làm bằng trực giác: đưa cạnh lên mặt trên ngay phía trên vị trí đích, rồi xoay mặt đó 180°.',
+    algs:[{t:'Cạnh ở trên, đúng hướng',a:'F2'},{t:'Cạnh ở tầng giữa',a:"R' D' R",n:'Đưa cạnh từ tầng giữa xuống đáy'}]},
+  {step:'Góc trắng – hoàn thành tầng 1',desc:'Đưa góc trắng lên tầng trên, ngay phía trên vị trí đích (trước-phải-dưới). Lặp R U R\' U\' tới khi góc vào đúng (1, 3 hoặc 5 lần).',
+    algs:[{t:'Sexy move ×1',a:"R U R' U'"},{t:'Góc trắng hướng ra trước (×3)',a:"R U R' U' ".repeat(3).trim()},{t:'Góc trắng hướng lên (×5)',a:"R U R' U' ".repeat(5).trim()}]},
+  {step:'Tầng 2 – các cạnh giữa',desc:'Tìm cạnh ở tầng trên không có màu vàng, xoay U để màu mặt trước của nó trùng tâm, rồi đưa sang phải hoặc trái.',
+    algs:[{t:'Đưa cạnh sang PHẢI',a:"U R U' R' U' F' U F"},{t:'Đưa cạnh sang TRÁI',a:"U' L' U L U F U' F'"}]},
+  {step:'Dấu cộng vàng',desc:'Chấm → làm 1 lần ra chữ L; chữ L (đặt ở góc trên-trái) → ra đường ngang; đường ngang → ra dấu cộng.',
+    algs:[{t:'Đường ngang → dấu cộng',a:"F R U R' U' F'",pic:'oll'},{t:'Chữ L → dấu cộng',a:"f R U R' U' f'",pic:'oll'},{t:'Chấm → dấu cộng',a:"F R U R' U' F' f R U R' U' f'",pic:'oll'}]},
+  {step:'Khớp cạnh vàng với tâm bên',desc:'Xoay U để có 2 cạnh khớp tâm. Nếu 2 cạnh đúng kề nhau → đặt ở sau và phải rồi làm công thức.',
+    algs:[{t:'Hoán đổi 2 cạnh (trước & trái)',a:"R U R' U R U2 R' U",pic:'pll'}]},
+  {step:'Đưa góc vàng về đúng vị trí',desc:'Đặt góc đã đúng vị trí ở trước-phải-trên, làm công thức 1–2 lần. Không góc nào đúng → làm 1 lần rồi tìm lại.',
+    algs:[{t:'Hoán vị 3 góc',a:"U R U' L' U R' U' L",pic:'pll'}]},
+  {step:'Xoay góc vàng – hoàn thành!',desc:'Đặt góc sai hướng ở trước-phải-trên, lặp R\' D\' R D (2 hoặc 4 lần) cho tới khi vàng hướng lên, rồi chỉ xoay U đưa góc sai tiếp theo vào.',
+    algs:[{t:"Xoay 2 góc – (R' D' R D)×2 · U · ×4 · U'",a:R4.repeat(2)+'U '+R4.repeat(4)+"U'",pic:'oll'},{t:'Công thức gốc',a:"R' D' R D"}]},
+];
+const F2L_GROUPS=['Cả góc và cạnh ở tầng trên','Góc ở tầng trên, cạnh nằm trong khe','Góc nằm trong khe, cạnh ở tầng trên','Cả góc và cạnh nằm trong khe'];
+const F2L_DESC=['Trường hợp phổ biến nhất. F2L 1–4 là các thao tác chèn cơ bản – mọi trường hợp khác đều đưa về chúng.','Tách cạnh ra khỏi khe, ghép với góc rồi đưa vào lại.','Tách góc ra khỏi khe lên tầng trên rồi ghép cặp.','Cặp đã nằm trong khe nhưng sai hướng/sai chỗ.'];
+const OLL_GROUPS=[
+  ['Chấm (Dot) – không có cạnh vàng nào',[1,2,3,4,17,18,19,20]],
+  ['Dấu cộng (OCLL) – cạnh đã đúng',[21,22,23,24,25,26,27]],
+  ['Mọi góc đã đúng',[28,57]],
+  ['Hình vuông (Square)',[5,6]],
+  ['Tia chớp nhỏ (Small lightning)',[7,8,11,12]],
+  ['Tia chớp lớn (Big lightning)',[39,40]],
+  ['Con cá (Fish)',[9,10,35,37]],
+  ['Mã đi (Knight move)',[13,14,15,16]],
+  ['Hình P',[31,32,43,44]],
+  ['Hình T',[33,45]],
+  ['Hình C',[34,46]],
+  ['Hình W',[36,38]],
+  ['Hình L',[47,48,49,50,53,54]],
+  ['Đường thẳng (I / Line)',[51,52,55,56]],
+  ['Khó nhận (Awkward)',[29,30,41,42]],
+];
+const OCLL_NAMES={21:'H',22:'Pi',23:'Headlights (U)',24:'T',25:'Bowtie (L)',26:'Anti-Sune',27:'Sune'};
+const PLL_GROUPS=[
+  ['Chỉ đổi cạnh',['Ua','Ub','H','Z']],
+  ['Chỉ đổi góc',['Aa','Ab','E']],
+  ['Đổi góc kề + cạnh',['T','F','Ja','Jb','Ra','Rb']],
+  ['G-perm',['Ga','Gb','Gc','Gd']],
+  ['Đổi góc chéo + cạnh',['V','Y','Na','Nb']],
+];
+const P=GEN.PLL,O=GEN.OLL;
+const OLL2=[
+  {step:'Bước 1 – Tạo dấu cộng vàng',desc:'Nhìn các cạnh vàng trên mặt trên:',algs:[
+    {t:'Đường thẳng (đặt ngang) – OLL 45',a:O[45],pic:'oll',id:'oll-45'},{t:'Chữ L (đặt góc trên-trái)',a:"f R U R' U' f'",pic:'oll',id:'oll2-L'},{t:'Chấm',a:"F R U R' U' F' f R U R' U' f'",pic:'oll',id:'oll2-dot'}]},
+  {step:'Bước 2 – Xoay đúng 4 góc (OCLL)',desc:'Đếm số góc vàng hướng lên: 1 góc → Sune / Anti-Sune; 0 góc → H hoặc Pi; 2 góc → Headlights, T hoặc Bowtie.',
+    algs:[27,26,21,22,23,24,25].map(n=>({t:OCLL_NAMES[n]+` (OLL ${n})`,a:O[n],pic:'oll',id:'oll-'+n}))},
+];
+const PLL2=[
+  {step:'Bước 1 – Hoán vị góc',desc:'Tìm "đèn pha" (2 góc cùng màu trên 1 mặt bên). Có đèn pha → đặt ra trái, làm T-perm (hoặc A-perm). Không có → Y-perm.',
+    algs:[{t:'T-perm (đổi 2 góc kề)',a:P.T,pic:'pll',id:'pll-T'},{t:'Y-perm (đổi 2 góc chéo)',a:P.Y,pic:'pll',id:'pll-Y'}]},
+  {step:'Bước 2 – Hoán vị cạnh',desc:'Có 1 mặt bên hoàn chỉnh → đặt ra sau, làm Ua/Ub. Không có → H hoặc Z.',
+    algs:['Ua','Ub','H','Z'].map(k=>({t:k+'-perm',a:P[k],pic:'pll',id:'pll-'+k}))},
+];
+
+/* ================= Progress (learned marks) ================= */
+let marks=store.get('rubik-progress',{});
+const MARK_CYCLE=['','learning','learned'],MARK_ICON={'':'○',learning:'•',learned:'✓'},MARK_TITLE={'':'Chưa học – bấm để đánh dấu đang học',learning:'Đang học – bấm để đánh dấu đã thuộc',learned:'Đã thuộc – bấm để bỏ đánh dấu'};
+function paintMark(el){const m=marks[el.dataset.id]||'';el.classList.toggle('mk-learning',m==='learning');el.classList.toggle('mk-learned',m==='learned');const b=el.querySelector('.mark');b.textContent=MARK_ICON[m];b.title=MARK_TITLE[m];}
+function cycleMark(id){const m=marks[id]||'';const nx=MARK_CYCLE[(MARK_CYCLE.indexOf(m)+1)%3];if(nx)marks[id]=nx;else delete marks[id];store.set('rubik-progress',marks);
+  document.querySelectorAll(`.card[data-id="${id}"]`).forEach(paintMark);updateProgress();}
+function updateProgress(){
+  document.querySelectorAll('.progbar').forEach(pb=>{
+    const sec=pb.closest('section');const ids=[...new Set([...sec.querySelectorAll('.card[data-id]')].map(c=>c.dataset.id))];
+    const ln=ids.filter(i=>marks[i]==='learned').length,lg=ids.filter(i=>marks[i]==='learning').length,tot=ids.length;
+    pb.querySelector('.txt b').textContent=`Đã thuộc ${ln}/${tot}`;
+    pb.querySelector('.txt span').textContent=` · đang học ${lg} · chưa học ${tot-ln-lg}`;
+    pb.querySelector('.bar').innerHTML=`<i style="width:${ln/tot*100}%;background:var(--ok)"></i><i style="width:${lg/tot*100}%;background:var(--warn)"></i>`;
+    applyFilter(sec);
+  });
+}
+function applyFilter(sec){
+  const f=sec.dataset.filter||'all';
+  sec.querySelectorAll('.card[data-id]').forEach(c=>{const m=marks[c.dataset.id]||'';
+    c.style.display=(f==='all'||(f==='todo'&&m!=='learned')||(f==='learning'&&m==='learning'))?'':'none';});
+  sec.querySelectorAll('.grid').forEach(g=>{const any=[...g.children].some(c=>c.style.display!=='none');g.style.display=any?'':'none';
+    const prev=[g.previousElementSibling,g.previousElementSibling&&g.previousElementSibling.previousElementSibling];
+    prev.forEach(p=>{if(p&&(p.classList.contains('desc')||p.classList.contains('step')))p.style.display=any?'':'none';});});
+}
+function addProgbar(sectionId){
+  const sec=document.getElementById(sectionId);
+  const pb=document.createElement('div');pb.className='progbar';
+  pb.innerHTML=`<div class="txt"><b></b><span></span><div class="bar"></div></div><div class="flt"><button data-f="all" class="on">Tất cả</button> <button data-f="todo">Chưa thuộc</button> <button data-f="learning">Đang học</button></div>`;
+  pb.querySelectorAll('.flt button').forEach(b=>b.onclick=()=>{pb.querySelectorAll('.flt button').forEach(x=>x.classList.remove('on'));b.classList.add('on');sec.dataset.filter=b.dataset.f;applyFilter(sec);});
+  sec.querySelector('p.lead').after(pb);
+}
+
+/* ================= Build UI ================= */
+function makeCard(c,fromSolved){
+  const el=document.createElement('div');el.className='card';
+  const pic=c.pic==='iso'?isoSVG(c.a):c.pic?topSVG(c.a,c.pic):'';
+  const alts=c.alt&&c.alt.length?`<div class="alts">Cách khác:${c.alt.map(a=>`<span data-a="${a}" title="Bấm để chạy công thức này">${a}</span>`).join('')}</div>`:'';
+  el.innerHTML=pic+`<div class="info"><div class="t">${c.t}</div><code>${c.a}</code>${c.n?`<div class="n">${c.n}</div>`:''}${alts}</div>`;
+  const activate=(alg,label)=>{
+    document.querySelectorAll('.card.active').forEach(x=>x.classList.remove('active'));
+    el.classList.add('active');load(label,alg,fromSolved);
+    if(window.innerWidth<950) document.querySelector('.sim').scrollIntoView({behavior:'smooth'});
+  };
+  el.onclick=()=>activate(c.a,c.t);
+  el.querySelectorAll('.alts span').forEach(s=>s.onclick=e=>{e.stopPropagation();activate(s.dataset.a,c.t+' (cách khác)');});
+  if(c.id){
+    el.dataset.id=c.id;
+    const b=document.createElement('button');b.className='mark';
+    b.onclick=e=>{e.stopPropagation();cycleMark(c.id);};
+    el.appendChild(b);paintMark(el);
+  }
+  return el;
+}
+function buildSteps(rootId,steps,numbered=true){
+  const root=document.getElementById(rootId);
+  steps.forEach((s,i)=>{
+    const h=document.createElement('h3');h.className='step';h.innerHTML=(numbered?`<b>${i+1}</b>`:`<b>${s.algs.length}</b>`)+s.step;root.appendChild(h);
+    if(s.desc){const p=document.createElement('p');p.className='desc';p.textContent=s.desc;root.appendChild(p);}
+    const g=document.createElement('div');g.className='grid';
+    s.algs.forEach(a=>g.appendChild(makeCard(a)));root.appendChild(g);
+  });
+}
+buildSteps('begContent',BEG);
+// F2L: classify each numbered case by where corner/edge sit in the starting state
+function f2lGroup(alg){
+  const st=setupState(alg);let cy=0,ey=0;
+  const sets={};for(const s of st){const k=s.p.join();(sets[k]=sets[k]||{p:s.p,cs:[]}).cs.push(s.c);}
+  for(const k in sets){const cs=sets[k].cs.slice().sort().join('');if(cs==='DFR')cy=sets[k].p[1];if(cs==='FR')ey=sets[k].p[1];}
+  return (cy===1?0:2)+(ey===1?0:1);
+}
+const f2lCases=GEN.F2L.map(o=>({...o,g:f2lGroup(o.a)}));
+buildSteps('f2lContent',F2L_GROUPS.map((name,gi)=>({step:name,desc:F2L_DESC[gi],
+  algs:f2lCases.filter(o=>o.g===gi).sort((a,b)=>a.num-b.num).map(o=>({t:'F2L '+o.num,a:o.a,alt:o.alt,pic:'iso',id:'f2l-'+o.num}))})),false);
+buildSteps('oll2Content',OLL2);
+buildSteps('pll2Content',PLL2);
+buildSteps('ollfContent',OLL_GROUPS.map(([name,ns])=>({step:name,algs:ns.map(n=>({t:'OLL '+n+(OCLL_NAMES[n]?' – '+OCLL_NAMES[n]:''),a:O[n],pic:'oll',id:'oll-'+n}))})),false);
+buildSteps('pllfContent',PLL_GROUPS.map(([name,ks])=>({step:name,algs:ks.map(k=>({t:k+'-perm',a:P[k],pic:'pll',id:'pll-'+k}))})),false);
+['f2l','oll2','pll2','ollf','pllf'].forEach(addProgbar);
+updateProgress();
+[{t:'Sexy move ×6 = về như cũ',a:"R U R' U' ".repeat(6).trim()},{t:'Sledgehammer',a:"R' F R F'"},{t:'Họa tiết bàn cờ',a:'M2 E2 S2'},{t:'Họa tiết khối trong khối',a:"F L F U' R U F2 L2 U' L' B D' B' L2 U"}]
+  .forEach(c=>document.getElementById('trickContent').appendChild(makeCard(c,true)));
+
+const mb=document.getElementById('moveBtns');
+["R","R'","R2","L","L'","U","U'","D","D'","F","F'","B","B'","r","M","E","S","x","y","z"].forEach(m=>{
+  const b=document.createElement('button');b.textContent=m;
+  b.onclick=async()=>{if(busy)return;playing=false;cur={name:'',toks:[],setup:[]};drawLine();nameEl.textContent='Thử ký hiệu: '+m;busy=true;await animateMove(parseAlg(m)[0]);busy=false;};
+  mb.appendChild(b);
+});
+document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#tabs button').forEach(x=>x.classList.remove('active'));b.classList.add('active');
+  document.querySelectorAll('section').forEach(s=>s.classList.toggle('show',s.id===b.dataset.tab));
+  b.blur();
+});
+
+/* ================= Theme ================= */
+const themeBtn=document.getElementById('themeBtn');
+function paintTheme(){themeBtn.textContent=document.documentElement.getAttribute('data-theme')==='light'?'🌙 Tối':'☀️ Sáng';}
+themeBtn.onclick=()=>{const t=document.documentElement.getAttribute('data-theme')==='light'?'dark':'light';document.documentElement.setAttribute('data-theme',t);try{localStorage.setItem('rubik-theme',t);}catch(e){}paintTheme();};
+paintTheme();
+
+/* ================= Timer ================= */
+const clockEl=document.getElementById('clock'),clockHint=document.getElementById('clockHint'),scrEl=document.getElementById('scramble');
+let times=store.get('rubik-times',[]);
+let scramble='';
+function genScramble(n=20){
+  const faces='RLUDFB',axis={R:0,L:0,U:1,D:1,F:2,B:2},mods=['',"'",'2'],out=[];
+  while(out.length<n){
+    const f=faces[Math.floor(Math.random()*6)];
+    const p1=out[out.length-1],p2=out[out.length-2];
+    if(p1&&p1[0]===f)continue;
+    if(p1&&p2&&axis[f]===axis[p1[0]]&&axis[f]===axis[p2[0]])continue;
+    out.push(f+mods[Math.floor(Math.random()*3)]);
+  }
+  return out.join(' ');
+}
+function newScramble(){scramble=genScramble();scrEl.textContent=scramble;}
+document.getElementById('btnNewScr').onclick=newScramble;
+document.getElementById('btnShowScr').onclick=()=>{load('Xáo trộn',scramble,true);play();};
+function fmt(ms){if(ms===Infinity)return 'DNF';const s=ms/1000;if(s<60)return s.toFixed(2);const m=Math.floor(s/60);return m+':'+(s-m*60).toFixed(2).padStart(5,'0');}
+function val(t){return t.pen==='DNF'?Infinity:t.ms+(t.pen==='+2'?2000:0);}
+function avgOf(n){
+  if(times.length<n)return null;
+  const v=times.slice(-n).map(val).sort((a,b)=>a-b).slice(1,-1);
+  if(v.some(x=>x===Infinity))return Infinity;
+  return v.reduce((a,b)=>a+b,0)/v.length;
+}
+function renderTimes(){
+  store.set('rubik-times',times);
+  const vals=times.map(val),fin=vals.filter(v=>v!==Infinity);
+  const best=fin.length?Math.min(...fin):null,mean=fin.length?fin.reduce((a,b)=>a+b,0)/fin.length:null;
+  const a5=avgOf(5),a12=avgOf(12);
+  const st=[['Tốt nhất',best],['Ao5',a5],['Ao12',a12],['Trung bình',mean]];
+  document.getElementById('stats').innerHTML=st.map(([k,v])=>`<div class="stat"><b>${v===null?'–':fmt(v)}</b><span>${k}</span></div>`).join('')+`<div class="stat"><b>${times.length}</b><span>Số lần giải</span></div>`;
+  const h=document.getElementById('hist');
+  if(!times.length){h.innerHTML='<tr><td style="color:var(--muted)">Chưa có lần giải nào.</td></tr>';return;}
+  h.innerHTML='<tr><th>#</th><th>Thời gian</th><th>Chuỗi xáo</th><th></th></tr>'+times.map((t,i)=>({t,i})).reverse().map(({t,i})=>
+    `<tr><td>${i+1}</td><td class="tm">${t.pen==='DNF'?'DNF':fmt(val(t))+(t.pen==='+2'?'+':'')}</td><td class="sc">${t.scr}</td>
+     <td style="white-space:nowrap"><button data-i="${i}" data-p="+2" class="${t.pen==='+2'?'on':''}">+2</button> <button data-i="${i}" data-p="DNF" class="${t.pen==='DNF'?'on':''}">DNF</button> <button data-i="${i}" data-x="1">✕</button></td></tr>`).join('');
+  h.querySelectorAll('button').forEach(b=>b.onclick=()=>{const i=+b.dataset.i;
+    if(b.dataset.x)times.splice(i,1);else times[i].pen=times[i].pen===b.dataset.p?null:b.dataset.p;renderTimes();});
+}
+document.getElementById('btnClear').onclick=()=>{if(times.length&&confirm('Xoá toàn bộ lịch sử bấm giờ?')){times=[];renderTimes();}};
+
+const T={phase:'idle',holdTimer:null,ready:false,start:0,inspStart:0,raf:0,inspPen:null,holding:false};
+function setClockClass(c){clockEl.className='clock'+(c?' '+c:'');}
+function showClock(text,hint){clockEl.firstChild.nodeValue=text;if(hint!==undefined)clockHint.textContent=hint;}
+function pressDown(){
+  if(T.phase==='running'){stopRun();T.holding=true;return;}
+  if(T.holding)return;
+  T.holding=true;T.ready=false;setClockClass('hold');
+  T.holdTimer=setTimeout(()=>{T.ready=true;setClockClass('ready');if(T.phase!=='inspecting')showClock('0.00');},300);
+}
+function pressUp(){
+  if(!T.holding)return;T.holding=false;clearTimeout(T.holdTimer);
+  if(T.justStopped){T.justStopped=false;setClockClass('');return;}
+  if(!T.ready){setClockClass(T.phase==='inspecting'?'insp':'');return;}
+  if(document.getElementById('optInsp').checked&&T.phase!=='inspecting')startInspection();else startRun();
+}
+function startInspection(){
+  T.phase='inspecting';T.inspStart=performance.now();setClockClass('insp');
+  clockHint.textContent='Đang quan sát… giữ rồi thả để bắt đầu giải';
+  const loop=()=>{if(T.phase!=='inspecting')return;const e=(performance.now()-T.inspStart)/1000;
+    showClock(e<15?String(Math.ceil(15-e)):e<17?'+2':'DNF');T.raf=requestAnimationFrame(loop);};loop();
+}
+function startRun(){
+  cancelAnimationFrame(T.raf);
+  T.inspPen=null;
+  if(T.phase==='inspecting'){const e=(performance.now()-T.inspStart)/1000;T.inspPen=e>17?'DNF':e>15?'+2':null;}
+  T.phase='running';T.start=performance.now();setClockClass('');
+  clockHint.textContent='Nhấn phím bất kỳ hoặc chạm để dừng';
+  if(document.getElementById('optHide').checked)document.body.classList.add('timing');
+  const loop=()=>{if(T.phase!=='running')return;showClock(fmt(performance.now()-T.start));T.raf=requestAnimationFrame(loop);};loop();
+}
+function stopRun(){
+  const ms=Math.round(performance.now()-T.start);cancelAnimationFrame(T.raf);
+  T.phase='idle';T.justStopped=true;document.body.classList.remove('timing');
+  times.push({ms,pen:T.inspPen,scr:scramble,d:Date.now()});
+  showClock(T.inspPen==='DNF'?'DNF':fmt(ms+(T.inspPen==='+2'?2000:0))+(T.inspPen==='+2'?'+':''),'Giữ Space (hoặc chạm giữ) rồi thả để giải lần tiếp theo');
+  setClockClass('');newScramble();renderTimes();
+}
+const timerOn=()=>document.getElementById('timer').classList.contains('show');
+clockEl.addEventListener('pointerdown',e=>{e.preventDefault();pressDown();});
+clockEl.addEventListener('pointerup',e=>{e.preventDefault();pressUp();});
+clockEl.addEventListener('pointerleave',()=>{if(T.holding&&!T.ready){T.holding=false;clearTimeout(T.holdTimer);setClockClass(T.phase==='inspecting'?'insp':'');}});
+
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT'&&e.target.type!=='checkbox')return;
+  if(timerOn()){
+    if(T.phase==='running'){e.preventDefault();if(!e.repeat){stopRun();T.holding=true;}return;}
+    if(e.key===' '){e.preventDefault();if(!e.repeat)pressDown();}
+    return;
+  }
+  if(e.key==='ArrowRight'){e.preventDefault();playing=false;updatePlayBtn();step();}
+  else if(e.key==='ArrowLeft'){e.preventDefault();back();}
+  else if(e.key===' '){e.preventDefault();play();}
+  else if(e.key==='Home'){e.preventDefault();resetPos();}
+});
+document.addEventListener('keyup',e=>{
+  if(!timerOn())return;
+  if(T.justStopped&&T.holding){T.holding=false;T.justStopped=false;return;}
+  if(e.key===' '){e.preventDefault();pressUp();}
+});
+newScramble();renderTimes();
+render();
+</script>
+</body>
+</html>
